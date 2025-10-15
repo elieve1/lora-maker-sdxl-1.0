@@ -479,14 +479,14 @@ class SmartAgent:
         self.scraper = MultiSourceImageScraper()
         self.client = Cerebras(api_key=os.environ.get("CEREBRAS_API_KEY"))
 
-    def _generate(self, system_prompt: str, user_prompt: str, max_tokens: int = 800, temperature: float = 0.7) -> str:
+    def _generate(self, system_prompt: str, user_prompt: str, max_tokens: int = 8000, temperature: float = 0.1) -> str:
         try:
             stream = self.client.chat.completions.create(
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                model="gpt-oss-120b", stream=True, max_completion_tokens=max_tokens,
+                model="qwen-3-235b-a22b-instruct-2507", stream=True, max_completion_tokens=max_tokens,
                 temperature=temperature, top_p=0.9
             )
             return "".join(chunk.choices[0].delta.content or "" for chunk in stream).strip()
@@ -498,7 +498,7 @@ class SmartAgent:
         fallback_queries = [f"{concept_name} professional photo", f"{concept_name} high quality portrait", f"{concept_name} full body professional photography", f"{concept_description}", f"{concept_name} studio photo", f"{concept_name} high resolution image", f"professional {concept_name} photograph", f"{concept_name} detailed photo", f"{concept_name} 4k photo", f"{concept_name} hd image"]
         try:
             system_prompt = "You are an AI assistant specialized in creating diverse, effective search queries for finding high-quality images for machine learning datasets. You only output a numbered list of queries and nothing else."
-            user_prompt = f"""Generate 8-10 diverse search queries to find high-quality images.
+            user_prompt = f"""Generate 100-1000 diverse search queries to find high-quality images.
 
 Subject: {concept_name}
 Description: {concept_description}
