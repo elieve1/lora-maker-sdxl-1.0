@@ -11,7 +11,8 @@ from dataclasses import dataclass, asdict, field
 from pathlib import Path
 from typing import Dict, List, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
+# Tambahkan baris ini
+from selenium.webdriver.common.by import By
 import modal
 import requests
 import aiohttp
@@ -245,9 +246,11 @@ class PinterestCrawler:
     def login(self):
         self.driver.get("https://www.pinterest.com/login/")
         sleep(3)
-        self.driver.find_element_by_name("id").send_keys(self.email)
-        self.driver.find_element_by_name("password").send_keys(self.password)
-        self.driver.find_element_by_xpath('//button[@type="submit"]').click()
+        # --- PERUBAHAN SINTAKS DI SINI ---
+        self.driver.find_element(By.NAME, "id").send_keys(self.email)
+        self.driver.find_element(By.NAME, "password").send_keys(self.password)
+        self.driver.find_element(By.XPATH, '//button[@type="submit"]').click()
+        # --- AKHIR PERUBAHAN ---
         sleep(5)
         logger.info("Successfully logged into Pinterest.")
 
