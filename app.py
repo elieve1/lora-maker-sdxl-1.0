@@ -67,13 +67,18 @@ class TrainingTask:
 # FIXED: Proper Kohya installation
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .pip_install(
+    image = (
+    modal.Image.debian_slim(python_version="3.11")
+    .pip_install(  # Langkah 1: Instal torch dan torchvision terlebih dahulu
+        "torch",
+        "torchvision",
+    )
+    .pip_install(  # Langkah 2: Instal sisa pustaka, termasuk xformers
         "fastapi[all]", "pydantic", "uvicorn[standard]", "requests",
-        "aiohttp", "aiofiles", "torch", "torchvision", "transformers",
-        "accelerate", "protobuf", "pillow", "opencv-python-headless",
-        "diffusers", "safetensors", "compel", "python-magic",
-        "tenacity", "tqdm", "huggingface-hub", "beautifulsoup4",
-        "selenium", "pyyaml", "xformers"
+        "aiohttp", "aiofiles", "transformers", "accelerate", "protobuf",
+        "pillow", "opencv-python-headless", "diffusers", "safetensors",
+        "compel", "python-magic", "tenacity", "tqdm", "huggingface-hub",
+        "beautifulsoup4", "selenium", "pyyaml", "xformers"
     )
     .apt_install(
         "git", "wget", "curl", "libgl1-mesa-glx", "libglib2.0-0",
