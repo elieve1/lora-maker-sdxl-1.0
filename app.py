@@ -754,6 +754,7 @@ HTML = """
 <script>
 function loraFactory() {
     return {
+        // STATE
         models: {}, allModelsReady: false, downloading: false,
         modelAlert: { show: false, type: '', message: '' },
         scraping: false, response: { show: false, type: '', message: '' },
@@ -761,51 +762,47 @@ function loraFactory() {
         review: { images: [], selectedLora: 'new', newLoraName: '', taskId: '' },
         tasks: [], loras: [], pollers: {},
 
+        // INITIALIZATION
         init() {
             this.checkModels();
             this.loadInfo();
             this.loadLoras();
+            this.startPollingActiveTasks(); // Memulai polling umum untuk semua task
         },
 
+        // LOCAL STORAGE
         loadInfo() {
             const savedInfo = localStorage.getItem('pinterestCrawlerInfo');
-            if (savedInfo) {
-                this.pinterest = JSON.parse(savedInfo);
-            }
+            if (savedInfo) { this.pinterest = JSON.parse(savedInfo); }
         },
-
         saveInfo() {
             localStorage.setItem('pinterestCrawlerInfo', JSON.stringify(this.pinterest));
             this.showTempResponse('success', '✅ Info saved to this browser.');
         },
-
         clearInfo() {
             localStorage.removeItem('pinterestCrawlerInfo');
             this.pinterest = { email: '', password: '', link: '', pages: 10 };
             this.showTempResponse('info', 'ℹ️ Saved info has been cleared.');
         },
-
         showTempResponse(type, message) {
             this.response = { show: true, type: type, message: message };
             setTimeout(() => this.response.show = false, 3000);
         },
 
+        // API CALLS
         async checkModels() {
              try {
                 const r = await fetch('/api/models/status');
-                const data = await r.json();
-                this.models = data;
-                this.allModelsReady = data.base_model?.ready && data.test_model?.ready;
+                this.models = await r.json();
+                this.allModelsReady = this.models.base_model?.ready && this.models.test_model?.ready;
             } catch (e) { console.error(e); }
         },
-
         async downloadModels() {
             this.downloading = true;
             try { await fetch('/api/models/download', { method: 'POST' }); }
             catch (e) { console.error(e); }
             finally { this.downloading = false; this.checkModels(); }
         },
-
         async startPinterestScrape() {
             if (!this.pinterest.email || !this.pinterest.password || !this.pinterest.link || !this.pinterest.pages) {
                 this.response = { show: true, type: 'error', message: 'All fields are required.' }; return;
@@ -821,8 +818,8 @@ function loraFactory() {
                 if (data.error) {
                     this.response = { show: true, type: 'error', message: `❌ ${data.error}` };
                 } else {
-                    this.response = { show: true, type: 'success', message: `✅ Task started! ID: ${data.task_id}` };
-                    this.pollTask(data.task_id);
+                    this.response = { show: true, type: 'success', message: `✅ Task ${data.task_id} started!` };
+                    this.pollTask(data.task_id); // MEMULAI POLLING UNTUK TASK BARU
                 }
             } catch (e) {
                 this.response = { show: true, type: 'error', message: `❌ ${e.message}` };
@@ -830,76 +827,96 @@ function loraFactory() {
                 this.scraping = false;
             }
         },
-
-        pollTask(id) {
-            if (this.pollers[id]) return;
-            this.pollers[id] = setInterval(async () => {
-                try {
-                    const r = await fetch(`/api/task/${id}`);
-                    const task = await r.json();
-                    if (task.error || task.status === 'completed' || task.status === 'failed') {
-                        clearInterval(this.pollers[id]);
-                        delete this.pollers[id];
-                        this.loadLoras();
-                    }
-                    if (task.status === 'review') {
-                        clearInterval(this.pollers[id]);
-                        delete this.pollers[id];
-                        this.showReview(id);
-                    }
-                } catch (e) {
-                    clearInterval(this.pollers[id]);
-                    delete this.pollers[id];
-                    console.error('Poll error:', e);
-                }
-            }, 5000);
-        },
-
-        async showReview(id) {
-            const r = await fetch(`/api/candidates/${id}`);
-            const data = await r.json();
-            const concept = data.concepts[0];
-            this.review.images = concept.candidates.map(c => ({
-                ...c,
-                thumbnail_url: `/api/thumbnail/${c.thumbnail_path.replace(/\\\\/g, '/')}`
-            }));
-            this.review.taskId = id;
-        },
-
-        deleteImage(index) {
-            this.review.images.splice(index, 1);
-        },
-
         async loadLoras() {
-            const r = await fetch('/api/loras');
-            const data = await r.json();
-            this.loras = data.loras;
+            try {
+                const r = await fetch('/api/loras');
+                this.loras = (await r.json()).loras;
+            } catch (e) { console.error(e); }
         },
-        
         async startTraining() {
-            let loraName = this.review.selectedLora === 'new' ? this.review.newLoraName : this.loras.find(l => l.task_id === this.review.selectedLora).name;
-            if (!loraName) {
+            const isNew = this.review.selectedLora === 'new';
+            let loraName = isNew ? this.review.newLoraName : this.loras.find(l => l.task_id === this.review.selectedLora).name;
+            if (isNew && !loraName) {
                 alert('Please provide a name for the new LoRA.');
                 return;
             }
-
-            const approvedImages = {
-                [loraName]: this.review.images.map(img => img.url)
-            };
-
+            const approvedImages = { [loraName]: this.review.images.map(img => img.url) };
+            
             await fetch('/api/start_training', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     task_id: this.review.taskId,
                     lora_name: loraName,
-                    parent_lora_id: this.review.selectedLora === 'new' ? '' : this.review.selectedLora,
+                    parent_lora_id: isNew ? '' : this.review.selectedLora,
                     approved_images: approvedImages
                 })
             });
+            this.showTempResponse('success', `✅ Training for ${loraName} started!`);
+            this.review.images = []; // Kosongkan review section
+            this.pollTask(this.review.taskId); // Lanjutkan polling untuk melihat progres training
+        },
 
-            this.review.images = [];
-            this.pollTask(this.review.taskId);
+        // POLLING & UI UPDATES
+        pollTask(id) {
+            if (this.pollers[id]) return;
+            this.pollers[id] = setInterval(async () => {
+                try {
+                    const r = await fetch(`/api/task/${id}`);
+                    const task = await r.json();
+                    
+                    if (task.error) { throw new Error(task.error); }
+
+                    if (task.status === 'review') {
+                        clearInterval(this.pollers[id]);
+                        delete this.pollers[id];
+                        this.showReview(id);
+                    } else if (task.status === 'completed' || task.status === 'failed') {
+                        clearInterval(this.pollers[id]);
+                        delete this.pollers[id];
+                        this.loadLoras();
+                    }
+                } catch (e) {
+                    clearInterval(this.pollers[id]);
+                    delete this.pollers[id];
+                    console.error('Poll error:', e);
+                }
+            }, 5000); // Check setiap 5 detik
+        },
+        startPollingActiveTasks() {
+            setInterval(async () => {
+                try {
+                    const r = await fetch('/api/tasks/active');
+                    const data = await r.json();
+                    if (data.tasks) {
+                        data.tasks.forEach(t => {
+                            if (!this.pollers[t.task_id]) { this.pollTask(t.task_id); }
+                        });
+                    }
+                } catch (e) { console.error('Active task sync error:', e); }
+            }, 15000);
+        },
+
+        // REVIEW LOGIC
+        async showReview(id) {
+            try {
+                const r = await fetch(`/api/candidates/${id}`);
+                const data = await r.json();
+                if(!data.concepts || data.concepts.length === 0) return;
+
+                const concept = data.concepts[0];
+                this.review.images = concept.candidates.map(c => ({
+                    ...c,
+                    thumbnail_url: `/api/thumbnail/${c.thumbnail_path.replace(/\\/g, '/')}`
+                }));
+                this.review.taskId = id;
+                this.review.newLoraName = concept.name; // Pre-fill nama LoRA baru
+            } catch(e) {
+                console.error("Failed to show review:", e);
+            }
+        },
+        deleteImage(index) {
+            this.review.images.splice(index, 1);
         }
     }
 }
