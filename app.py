@@ -95,7 +95,7 @@ image = (
         "tenacity",
         "tqdm",
         "huggingface-hub",
-        "cerebras-sdk", 
+        "cerebras-cloud-sdk", 
     )
     .apt_install(
         "git", "wget", "curl",
