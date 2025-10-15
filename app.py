@@ -85,7 +85,7 @@ image = (
     .run_commands(
         # FIXED: Clone Kohya and verify installation
         "git clone https://github.com/bmaltais/kohya_ss.git /root/kohya_ss",
-        "cd /root/kohya_ss && git checkout sd3",  # Use stable branch
+        "cd /root/kohya_ss && git checkout main",  # Use stable branch
         "ls -la /root/kohya_ss/",  # Verify files exist
         "test -f /root/kohya_ss/sdxl_train_network.py || echo 'ERROR: sdxl_train_network.py not found!'"
     )
