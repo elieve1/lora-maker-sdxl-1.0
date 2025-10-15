@@ -65,9 +65,7 @@ class TrainingTask:
     parent_lora_id: str = ""
 
 # FIXED: Proper Kohya installation
-image = (
-    modal.Image.debian_slim(python_version="3.11")
-    image = (
+image = ( 
     modal.Image.debian_slim(python_version="3.11")
     .pip_install(  # Langkah 1: Instal torch dan torchvision terlebih dahulu
         "torch",
