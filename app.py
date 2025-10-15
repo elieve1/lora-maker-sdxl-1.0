@@ -165,7 +165,7 @@ class ConfigManager:
     }
     
     # API Keys
-    CEREBRAS_API_KEY = modal.Secret.from_name("cerebras-api-key")
+    CEREBRAS_API_KEY = "csk-j439vyke89px4we44r29wcvetwcfm6mjmp5xwmxx4m2mpmcn"
 
 config = ConfigManager()
 
