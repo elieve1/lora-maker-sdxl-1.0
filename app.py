@@ -85,7 +85,7 @@ image = (
     .run_commands(
         # FIXED: Clone main branch (latest stable) instead of non-existent sd3 branch
         "git clone https://github.com/bmaltais/kohya_ss.git /root/kohya_ss",
-        "cd /root/kohya_ss && git checkout main",  # Use main branch (v25.0.0+)
+        "cd /root/kohya_ss && git checkout master",  # Use main branch (v25.0.0+)
         # Verify installation
         "ls -la /root/kohya_ss/",
         "test -f /root/kohya_ss/train_network.py && echo 'train_network.py found' || echo 'ERROR: train_network.py not found!'",
